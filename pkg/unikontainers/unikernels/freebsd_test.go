@@ -232,13 +232,14 @@ func TestFreeBSDBuildUrunitConfig(t *testing.T) {
 		},
 		ProcConfig: types.ProcessConfig{UID: 1001, GID: 1001, WorkDir: "/tmp"},
 	}
-	conf := f.buildUrunitConfig()
+	conf, err := f.buildUrunitConfig()
+	require.NoError(t, err)
 
 	assert.Equal(t, 0, len(conf)%blockSectorSize, "config must be a whole number of sectors")
-	expectedHead := "UES\nPATH=/bin:/sbin\nFOO=bar\nUEE\n" +
-		"UCS\nUID:1001\nGID:1001\nWD:/tmp\nARC:3\nARV:/rescue/sh\nARV:-c\nARV:echo hello world\nUCE\n" +
-		"UBS\nID:FCvol0\nMP:/data\nUBE\n" +
-		"UNS\nIP:172.17.0.2\nGW:172.17.0.1\nMSK:255.255.0.0\nUNE\n" +
+	expectedHead := "UES\nPATH=/bin:/sbin\x00FOO=bar\x00UEE\n" +
+		"UCS\nUID:1001\x00GID:1001\x00WD:/tmp\x00ARC:3\x00ARV:/rescue/sh\x00ARV:-c\x00ARV:echo hello world\x00UCE\n" +
+		"UBS\nID:FCvol0\x00MP:/data\x00UBE\n" +
+		"UNS\nIP:172.17.0.2\x00GW:172.17.0.1\x00MSK:255.255.0.0\x00UNE\n" +
 		"PAD\n"
 	assert.True(t, strings.HasPrefix(conf, expectedHead), "unexpected config:\n%s", conf)
 	assert.Equal(t, "", strings.Trim(conf[len(expectedHead):], "\n"), "padding must be newlines only")
