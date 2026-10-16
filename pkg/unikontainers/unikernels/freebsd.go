@@ -270,10 +270,9 @@ func (f *FreeBSD) setupUrunitConfig() error {
 // (UNS/UNE, since FreeBSD has no ip= boot parameter). The result is padded to
 // a multiple of the sector size, as it is exposed as a raw block device.
 func (f *FreeBSD) buildUrunitConfig() (string, error) {
-	// Format: UES\n<env1>\0<env2>\0...\nUEE\n
-	// Section markers stay newline-terminated, but every value record is
-	// NUL-terminated so a newline inside a value cannot corrupt framing
-	// (see #1068). NUL cannot appear in valid values, so it is rejected.
+	// Every section marker and value is a NUL-terminated record, so a newline
+	// inside a value cannot corrupt framing (see #1068). NUL cannot appear in
+	// valid values, so it is rejected.
 	for _, e := range f.Env {
 		if err := validateUrunitValue("env var", e); err != nil {
 			return "", err
@@ -309,15 +308,15 @@ func (f *FreeBSD) buildUrunitConfig() (string, error) {
 	}
 	var sb strings.Builder
 	sb.WriteString(envStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	for _, e := range f.Env {
 		sb.WriteString(e)
 		sb.WriteString("\x00")
 	}
 	sb.WriteString(envEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString(lpcStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString("UID:")
 	sb.WriteString(strconv.FormatUint(uint64(f.ProcConfig.UID), 10))
 	sb.WriteString("\x00")
@@ -336,9 +335,9 @@ func (f *FreeBSD) buildUrunitConfig() (string, error) {
 		sb.WriteString("\x00")
 	}
 	sb.WriteString(lpcEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString(blkStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	for _, b := range f.Block {
 		if b.ID == "rootfs" {
 			continue
@@ -354,9 +353,9 @@ func (f *FreeBSD) buildUrunitConfig() (string, error) {
 		sb.WriteString("\x00")
 	}
 	sb.WriteString(blkEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString(netStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString("IP:")
 	sb.WriteString(f.Net.Address)
 	sb.WriteString("\x00")
@@ -367,11 +366,11 @@ func (f *FreeBSD) buildUrunitConfig() (string, error) {
 	sb.WriteString(f.Net.Mask)
 	sb.WriteString("\x00")
 	sb.WriteString(netEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	// Pad to a whole number of sectors. The PAD line marks the end of the
 	// configuration for readers; the remaining bytes are newlines.
 	sb.WriteString(paddingMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	for sb.Len()%blockSectorSize != 0 {
 		sb.WriteString("\n")
 	}

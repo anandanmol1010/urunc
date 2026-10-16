@@ -318,10 +318,9 @@ func (l *Linux) setupUrunitConfig(rfs types.RootfsParams) error {
 
 // buildEnvConfig creates the environment configuration content for urunit.
 func (l *Linux) buildUrunitConfig() (string, error) {
-	// Format: UES\n<env1>\0<env2>\0...\nUEE\n
-	// Section markers stay newline-terminated, but every value record is
-	// NUL-terminated so a newline inside a value cannot corrupt framing
-	// (see #1068). NUL cannot appear in valid values, so it is rejected.
+	// Every section marker and value is a NUL-terminated record, so a newline
+	// inside a value cannot corrupt framing (see #1068). NUL cannot appear in
+	// valid values, so it is rejected.
 	for _, e := range l.Env {
 		if err := validateUrunitValue("env var", e); err != nil {
 			return "", err
@@ -343,15 +342,15 @@ func (l *Linux) buildUrunitConfig() (string, error) {
 	}
 	var sb strings.Builder
 	sb.WriteString(envStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	for _, e := range l.Env {
 		sb.WriteString(e)
 		sb.WriteString("\x00")
 	}
 	sb.WriteString(envEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString(lpcStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString("UID:")
 	sb.WriteString(strconv.FormatUint(uint64(l.ProcConfig.UID), 10))
 	sb.WriteString("\x00")
@@ -362,9 +361,9 @@ func (l *Linux) buildUrunitConfig() (string, error) {
 	sb.WriteString(l.ProcConfig.WorkDir)
 	sb.WriteString("\x00")
 	sb.WriteString(lpcEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	sb.WriteString(blkStartMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	for _, b := range l.Blk {
 		if b.ID == "rootfs" {
 			continue
@@ -380,7 +379,7 @@ func (l *Linux) buildUrunitConfig() (string, error) {
 		sb.WriteString("\x00")
 	}
 	sb.WriteString(blkEndMarker)
-	sb.WriteString("\n")
+	sb.WriteString("\x00")
 	return sb.String(), nil
 }
 

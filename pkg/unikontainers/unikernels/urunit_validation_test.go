@@ -56,7 +56,7 @@ func TestLinuxBuildUrunitConfigNULSeparated(t *testing.T) {
 	// Regression: valid config builds with NUL-terminated records.
 	conf, err := base().buildUrunitConfig()
 	require.NoError(t, err)
-	assert.Contains(t, conf, "UES\nPATH=/bin:/sbin\x00FOO=bar\x00UEE\n")
+	assert.Contains(t, conf, "UES\x00PATH=/bin:/sbin\x00FOO=bar\x00UEE\x00")
 	assert.Contains(t, conf, "WD:/tmp\x00")
 
 	// Issue #1068 scenario: newline in values stays data, config still builds.
@@ -65,7 +65,7 @@ func TestLinuxBuildUrunitConfigNULSeparated(t *testing.T) {
 	conf, err = newlineEnv.buildUrunitConfig()
 	require.NoError(t, err)
 	assert.Contains(t, conf, "EVIL=line1\nUEE\nFAKE=injected\x00")
-	assert.Contains(t, conf, "\nUEE\n")
+	assert.Contains(t, conf, "\x00UEE\x00")
 
 	newlineWorkDir := base()
 	newlineWorkDir.ProcConfig.WorkDir = "/tmp\n/injected"
@@ -108,7 +108,7 @@ func TestFreeBSDBuildUrunitConfigNULSeparated(t *testing.T) {
 	conf, err := base().buildUrunitConfig()
 	require.NoError(t, err)
 	assert.Equal(t, 0, len(conf)%blockSectorSize)
-	assert.True(t, strings.HasPrefix(conf, "UES\nPATH=/bin:/sbin\x00"))
+	assert.True(t, strings.HasPrefix(conf, "UES\x00PATH=/bin:/sbin\x00"))
 
 	// Issue #1068 scenarios now survive as data.
 	newlineEnv := base()
